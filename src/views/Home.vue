@@ -1,8 +1,8 @@
 <template>
   <div class="home-container">
     <div class="search-bar">
-      <div class="location">
-        <span class="location-text">杭州</span>
+      <div class="location" @click="retryLocation">
+        <span class="location-text">{{ currentLocation.city || currentLocation.name }}</span>
         <van-icon name="arrow-down" size="12" />
       </div>
       <div class="search-input">
@@ -94,6 +94,8 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import request from '@/utils/request'
+import locationUtil from '@/utils/location'
+import { showToast } from 'vant'
 
 const router = useRouter()
 const categoryList = ref([])
@@ -102,6 +104,7 @@ const loading = ref(false)
 const finished = ref(false)
 const refreshing = ref(false)
 const current = ref(1)
+const currentLocation = ref({})
 const PAGE_SIZE = 10
 
 const defaultCategories = [
@@ -124,6 +127,21 @@ const leftList = computed(() => {
 const rightList = computed(() => {
   return blogList.value.filter((_, index) => index % 2 !== 0)
 })
+
+const loadLocation = async () => {
+  try {
+    const location = await locationUtil.getCurrentLocation()
+    currentLocation.value = location
+  } catch (error) {
+    console.error('加载位置失败:', error)
+    currentLocation.value = locationUtil.getDefaultLocation()
+  }
+}
+
+const retryLocation = () => {
+  showToast('正在重新定位...')
+  loadLocation()
+}
 
 const loadCategoryList = async () => {
   try {
@@ -191,6 +209,7 @@ const onCategoryClick = (item) => {
 
 onMounted(() => {
   loadCategoryList()
+  loadLocation()
 })
 </script>
 
@@ -214,6 +233,7 @@ onMounted(() => {
   color: #fff;
   font-size: 14px;
   white-space: nowrap;
+  cursor: pointer;
 }
 
 .location-text {
