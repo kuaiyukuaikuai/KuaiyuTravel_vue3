@@ -1,11 +1,11 @@
 <template>
   <div class="poi-list-container">
-    <van-nav-bar :title="title" left-arrow @click-left="goBack" />
+    <van-nav-bar :title="title" left-arrow @click-left="goBack" fixed placeholder />
     
     <van-pull-refresh v-model="refreshing" @refresh="onRefresh">
       <van-list
-        v-model:loading="loading"
-        :finished="finished"
+        v-model:loading="listLoading"
+        :finished="!hasMore"
         finished-text="没有更多了"
         @load="onLoad"
       >
@@ -20,6 +20,7 @@
                 <span class="poi-score">评分 {{ item.score || 4.5 }}</span>
                 <span class="poi-sold">已售 {{ item.sold || 0 }}</span>
                 <span class="poi-price">人均 ¥{{ item.avgPrice || 0 }}</span>
+                <span v-if="item.distance" class="poi-distance">距离 {{ item.distance.toFixed(2) }}km</span>
               </div>
             </div>
           </div>
@@ -32,69 +33,112 @@
 <script setup>
 import { ref, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import request from '@/utils/request'
+import { getPoiByType } from '@/api/poi'
+import locationUtil from '@/utils/location'
 
 const route = useRoute()
 const router = useRouter()
 
 const poiList = ref([])
-const loading = ref(false)
-const finished = ref(false)
-const refreshing = ref(false)
 const current = ref(1)
-const PAGE_SIZE = 10
+const listLoading = ref(false) // 专供 van-list 使用的 loading 状态
+const hasMore = ref(true)
+const refreshing = ref(false)
+const PAGE_SIZE = 5
 
-const title = computed(() => {
-  return route.query.title || '分类列表'
-})
-
-const typeId = computed(() => {
-  return route.query.typeId
-})
+const title = computed(() => route.query.title || '分类列表')
+const typeId = computed(() => route.query.typeId)
 
 const goBack = () => {
   router.back()
 }
 
-const onLoad = async () => {
+// 核心加载逻辑
+const loadData = async (isRefresh = false) => {
+  if (isRefresh) {
+    current.value = 1
+    hasMore.value = true
+  }
+  
   try {
-    const res = await request.get('/poi/of/type', {
-      params: {
-        typeId: typeId.value,
-        current: current.value
+    const params = {
+      typeId: typeId.value,
+      current: current.value
+    }
+
+    try {
+      const location = await locationUtil.getCurrentLocation()
+      if (location && location.longitude && location.latitude) {
+        params.x = location.longitude
+        params.y = location.latitude
       }
-    })
-    
-    const newRecords = res.data?.records || res.data || []
-    
-    poiList.value.push(...newRecords)
-    
-    if (newRecords.length === 0 || newRecords.length < PAGE_SIZE) {
-      finished.value = true
+    } catch (locError) {
+      console.warn('获取位置失败:', locError)
+    }
+
+    const res = await getPoiByType(params)
+
+    let newRecords = []
+    if (res.data) {
+      if (Array.isArray(res.data)) {
+        newRecords = res.data
+      } else if (res.data.records && Array.isArray(res.data.records)) {
+        newRecords = res.data.records
+      } else if (res.data.list && Array.isArray(res.data.list)) {
+        newRecords = res.data.list
+      }
+    }
+
+    if (isRefresh) {
+      poiList.value = newRecords
+    } else {
+      const existingIds = new Set(poiList.value.map(item => item.id))
+      const uniqueNewRecords = newRecords.filter(item => item && item.id && !existingIds.has(item.id))
+      poiList.value.push(...uniqueNewRecords)
+    }
+
+    // 判断是否还有更多数据
+    if (newRecords.length < PAGE_SIZE) {
+      hasMore.value = false
     } else {
       current.value++
     }
   } catch (error) {
-    console.error('加载列表失败', error)
-    finished.value = true
+    console.error('加载失败:', error)
   } finally {
-    loading.value = false
+    listLoading.value = false // 必须手动置为 false，van-list 才能准备下一次加载
+    refreshing.value = false
   }
 }
 
-const onRefresh = async () => {
-  current.value = 1
-  poiList.value = []
-  finished.value = false
-  await onLoad()
-  refreshing.value = false
+// 供 van-list 调用的触底加载方法
+const onLoad = () => {
+  if (!hasMore.value) return
+  loadData(false)
 }
 
-watch(() => route.query.typeId, () => {
-  poiList.value = []
-  current.value = 1
-  finished.value = false
-})
+// 下拉刷新方法
+const onRefresh = () => {
+  refreshing.value = true
+  hasMore.value = true
+  listLoading.value = true
+  loadData(true)
+}
+
+let lastTypeId = ref(null)
+
+watch(() => route.query.typeId, (newTypeId) => {
+  if (newTypeId && newTypeId !== lastTypeId.value) {
+    lastTypeId.value = newTypeId
+    poiList.value = [] // 清空旧数据
+    // 切换分类时，让 van-list 自动触发第一次加载，这里无需手动调用 loadData
+    hasMore.value = true
+    listLoading.value = true
+    loadData(true)
+  }
+}, { immediate: true })
+
+// ⚠️ 注意：移除了 onMounted 和 onUnmounted 中的手写 scroll 监听！
 </script>
 
 <style scoped>
@@ -151,12 +195,22 @@ watch(() => route.query.typeId, () => {
   display: flex;
   gap: 12px;
   margin-top: 8px;
+  flex-wrap: wrap;
 }
 
 .poi-score,
 .poi-sold,
-.poi-price {
+.poi-price,
+.poi-distance {
   font-size: 12px;
   color: #ff6a00;
+}
+
+.loading,
+.no-more {
+  text-align: center;
+  padding: 20px;
+  color: #969799;
+  font-size: 14px;
 }
 </style>
