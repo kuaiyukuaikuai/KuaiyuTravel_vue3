@@ -39,6 +39,7 @@
               v-for="(item, index) in leftList"
               :key="item.id"
               class="card-item"
+              @click="goToBlogDetail(item.id)"
             >
               <img :src="item.image" class="card-image" alt="" />
               <div class="card-content">
@@ -64,6 +65,7 @@
               v-for="(item, index) in rightList"
               :key="item.id"
               class="card-item"
+              @click="goToBlogDetail(item.id)"
             >
               <img :src="item.image" class="card-image" alt="" />
               <div class="card-content">
@@ -204,6 +206,12 @@ const onCategoryClick = (item) => {
       title: item.name
     }
   })
+}
+
+const goToBlogDetail = (id) => {
+  if (id) {
+    router.push(`/blog-detail/${id}`)
+  }
 }
 
 onMounted(() => {

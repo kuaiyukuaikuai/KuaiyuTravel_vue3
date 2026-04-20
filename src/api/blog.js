@@ -29,3 +29,11 @@ export const getMyBlogs = (params) => {
 export const publishBlog = (data) => {
   return request.post('/blog', data)
 }
+
+/**
+ * 根据ID获取博客详情
+ * @param {number} id - 博客ID
+ */
+export const getBlogById = (id) => {
+  return request.get(`/blog/${id}`)
+}
