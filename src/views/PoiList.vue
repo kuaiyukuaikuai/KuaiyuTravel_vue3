@@ -10,7 +10,7 @@
         @load="onLoad"
       >
         <div class="poi-list">
-          <div v-for="item in poiList" :key="item.id" class="poi-item">
+          <div v-for="item in poiList" :key="item.id" class="poi-item" @click="goToPoiDetail(item.id)">
             <img v-if="item.images" :src="item.images.split(',')[0]" class="poi-image" alt="" />
             <img v-else src="https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=200&h=200&fit=crop" class="poi-image" alt="" />
             <div class="poi-info">
@@ -51,6 +51,12 @@ const typeId = computed(() => route.query.typeId)
 
 const goBack = () => {
   router.back()
+}
+
+const goToPoiDetail = (id) => {
+  if (id) {
+    router.push(`/poi-detail/${id}`)
+  }
 }
 
 // 核心加载逻辑

@@ -28,6 +28,12 @@ const router = createRouter({
       meta: { requiresAuth: true }
     },
     {
+      path: '/poi-detail/:id',
+      name: 'PoiDetail',
+      component: () => import('@/views/PoiDetail.vue'),
+      meta: { requiresAuth: true }
+    },
+    {
       path: '/',
       component: Layout,
       meta: { requiresAuth: true },

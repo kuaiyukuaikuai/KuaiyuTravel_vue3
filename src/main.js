@@ -22,7 +22,11 @@ import {
   Uploader,
   Cell,
   Popup,
-  Search
+  Search,
+  Swipe,
+  SwipeItem,
+  Empty,
+  Loading
 } from 'vant'
 import 'vant/lib/index.css'
 
@@ -50,5 +54,9 @@ app.use(Uploader)
 app.use(Cell)
 app.use(Popup)
 app.use(Search)
+app.use(Swipe)
+app.use(SwipeItem)
+app.use(Empty)
+app.use(Loading)
 
 app.mount('#app')
