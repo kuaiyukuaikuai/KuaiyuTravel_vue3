@@ -7,3 +7,19 @@ import request from '@/utils/request'
 export const getVoucherListByPoiId = (poiId) => {
   return request.get(`/voucher/list/${poiId}`)
 }
+
+/**
+ * 购买普通优惠券
+ * @param {number} voucherId - 优惠券ID
+ */
+export const buyCommonVoucher = (voucherId) => {
+  return request.post(`/voucher-order/common/${voucherId}`)
+}
+
+/**
+ * 购买秒杀优惠券
+ * @param {number} voucherId - 优惠券ID
+ */
+export const buySeckillVoucher = (voucherId) => {
+  return request.post(`/voucher-order/seckill/${voucherId}`)
+}

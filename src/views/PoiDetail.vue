@@ -40,26 +40,27 @@
             <div class="voucher-left">
               <div class="voucher-price">
                 <span class="currency">¥</span>
-                <span class="value">{{ voucher.discountValue || voucher.denomination || 0 }}</span>
+                <span class="value">{{ formatMoney(voucher.actualValue) }}</span>
               </div>
               <div class="voucher-condition">
-                满{{ voucher.conditions || voucher.condition || 0 }}元可用
+                需支付 ¥{{ formatMoney(voucher.payValue) }}
               </div>
             </div>
             <div class="voucher-right">
-              <div class="voucher-title">{{ voucher.title || voucher.name }}</div>
+              <div class="voucher-title">{{ voucher.title }}</div>
               <div class="voucher-info">
-                {{ voucher.type === 1 ? '普通券' : '秒杀券' }} · 
-                剩余{{ voucher.stock || voucher.leftStock || 0 }}张
+                {{ voucher.type === 1 ? '秒杀券' : '普通券' }} 
+                <span v-if="voucher.type === 1">· 剩余{{ voucher.stock || 0 }}张</span>
               </div>
               <van-button 
                 type="danger" 
                 size="small" 
                 round 
                 @click="buyVoucher(voucher)"
-                :disabled="(voucher.stock || voucher.leftStock || 0) <= 0"
+                :disabled="voucher.type === 1 && (voucher.stock || 0) <= 0"
+                :loading="voucher.loading"
               >
-                {{ (voucher.stock || voucher.leftStock || 0) <= 0 ? '已抢光' : '抢购' }}
+                {{ voucher.type === 1 && (voucher.stock || 0) <= 0 ? '已抢光' : '抢购' }}
               </van-button>
             </div>
           </div>
@@ -78,8 +79,8 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { getPoiById } from '@/api/poi'
-import { getVoucherListByPoiId } from '@/api/voucher'
-import { showToast } from 'vant'
+import { getVoucherListByPoiId, buyCommonVoucher, buySeckillVoucher } from '@/api/voucher'
+import { showToast, showLoadingToast, showSuccessToast, closeToast } from 'vant'
 
 const route = useRoute()
 const router = useRouter()
@@ -91,6 +92,16 @@ const imageList = computed(() => {
   if (!poi.value?.images) return ['https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=600&h=400&fit=crop']
   return poi.value.images.split(',').filter(img => img)
 })
+
+/**
+ * 金额格式化：将分转换为元，保留两位小数
+ * @param {number} cents - 金额（分）
+ * @returns {string} 格式化后的金额（元）
+ */
+const formatMoney = (cents) => {
+  if (!cents && cents !== 0) return '0.00'
+  return (cents / 100).toFixed(2)
+}
 
 const loadPoiDetail = async () => {
   try {
@@ -116,8 +127,42 @@ const goBack = () => {
   router.back()
 }
 
-const buyVoucher = (voucher) => {
-  showToast('购买功能开发中...')
+const buyVoucher = async (voucher) => {
+  try {
+    voucher.loading = true
+    showLoadingToast({
+      message: '购买中...',
+      forbidClick: true
+    })
+
+    let res
+    if (voucher.type === 1) {
+      // 秒杀券
+      res = await buySeckillVoucher(voucher.id)
+    } else {
+      // 普通券
+      res = await buyCommonVoucher(voucher.id)
+    }
+
+    closeToast()
+    if (res.success) {
+      showSuccessToast('购买成功！')
+      if (voucher.type === 1 && voucher.stock) {
+        voucher.stock--
+        if (voucher.stock <= 0) {
+          voucher.stock = 0
+        }
+      }
+    } else {
+      showToast(res.message || '购买失败')
+    }
+  } catch (error) {
+    closeToast()
+    console.error('购买失败:', error)
+    showToast(error.message || '购买失败，请稍后重试')
+  } finally {
+    voucher.loading = false
+  }
 }
 
 onMounted(() => {
