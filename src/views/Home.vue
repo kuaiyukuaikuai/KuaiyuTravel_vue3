@@ -52,8 +52,8 @@
                     </div>
                     <span class="user-name">{{ item.name || '用户' }}</span>
                   </div>
-                  <div class="likes">
-                    <van-icon name="like-o" :size="14" :color="item.isLike ? '#ff6a00' : '#969799'" />
+                  <div class="likes" @click.stop="handleLike(item)">
+                    <van-icon :name="item.isLike ? 'like' : 'like-o'" :size="14" :color="item.isLike ? '#ff6a00' : '#969799'" />
                     <span>{{ item.liked || 0 }}</span>
                   </div>
                 </div>
@@ -78,8 +78,8 @@
                     </div>
                     <span class="user-name">{{ item.name || '用户' }}</span>
                   </div>
-                  <div class="likes">
-                    <van-icon name="like-o" :size="14" :color="item.isLike ? '#ff6a00' : '#969799'" />
+                  <div class="likes" @click.stop="handleLike(item)">
+                    <van-icon :name="item.isLike ? 'like' : 'like-o'" :size="14" :color="item.isLike ? '#ff6a00' : '#969799'" />
                     <span>{{ item.liked || 0 }}</span>
                   </div>
                 </div>
@@ -96,7 +96,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { getPoiTypeList } from '@/api/poiType'
-import { getHotBlogs } from '@/api/blog'
+import { getHotBlogs, likeBlog } from '@/api/blog'
 import locationUtil from '@/utils/location'
 import { showToast } from 'vant'
 
@@ -211,6 +211,25 @@ const onCategoryClick = (item) => {
 const goToBlogDetail = (id) => {
   if (id) {
     router.push(`/blog-detail/${id}`)
+  }
+}
+
+const handleLike = async (item) => {
+  try {
+    const res = await likeBlog(item.id)
+    if (res.success) {
+      item.isLike = !item.isLike
+      if (item.isLike) {
+        item.liked = (item.liked || 0) + 1
+      } else {
+        item.liked = Math.max(0, (item.liked || 0) - 1)
+      }
+    } else {
+      showToast(res.message || '操作失败')
+    }
+  } catch (error) {
+    console.error('点赞失败:', error)
+    showToast(error.message || '操作失败，请稍后重试')
   }
 }
 

@@ -37,3 +37,19 @@ export const publishBlog = (data) => {
 export const getBlogById = (id) => {
   return request.get(`/blog/${id}`)
 }
+
+/**
+ * 点赞/取消点赞博客
+ * @param {number} id - 博客ID
+ */
+export const likeBlog = (id) => {
+  return request.put(`/blog/like/${id}`)
+}
+
+/**
+ * 查询博客点赞列表
+ * @param {number} id - 博客ID
+ */
+export const getBlogLikes = (id) => {
+  return request.get(`/blog/likes/${id}`)
+}

@@ -48,6 +48,20 @@
           <span>{{ blog.liked || 0 }}</span>
         </div>
       </div>
+      
+      <!-- 点赞用户列表 -->
+      <div class="likes-section" v-if="likeUsers.length > 0">
+        <div class="section-title">点赞用户（{{ likeUsers.length }}）</div>
+        <div class="users-list">
+          <div v-for="user in likeUsers" :key="user.id" class="user-item">
+            <img v-if="user.icon" :src="user.icon" class="user-list-avatar" alt="" />
+            <div v-else class="user-list-avatar-placeholder">
+              <van-icon name="user-o" size="16" color="#fff" />
+            </div>
+            <span class="user-list-name">{{ user.nickName || '用户' }}</span>
+          </div>
+        </div>
+      </div>
     </div>
     
     <van-loading v-else size="24px">加载中...</van-loading>
@@ -57,12 +71,14 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { getBlogById } from '@/api/blog'
+import { getBlogById, likeBlog, getBlogLikes } from '@/api/blog'
+import { showToast } from 'vant'
 
 const route = useRoute()
 const router = useRouter()
 
 const blog = ref(null)
+const likeUsers = ref([])
 
 const imageList = computed(() => {
   if (!blog.value?.images) return []
@@ -74,8 +90,20 @@ const loadBlogDetail = async () => {
     const id = route.params.id
     const res = await getBlogById(id)
     blog.value = res.data
+    // 加载点赞用户列表
+    await loadLikeUsers()
   } catch (error) {
     console.error('加载博客详情失败:', error)
+  }
+}
+
+const loadLikeUsers = async () => {
+  try {
+    const id = route.params.id
+    const res = await getBlogLikes(id)
+    likeUsers.value = res.data || []
+  } catch (error) {
+    console.error('加载点赞用户失败:', error)
   }
 }
 
@@ -89,9 +117,26 @@ const goToPoi = (id) => {
   }
 }
 
-const toggleLike = () => {
-  // 点赞功能后续实现
-  console.log('点赞')
+const toggleLike = async () => {
+  try {
+    const id = route.params.id
+    const res = await likeBlog(id)
+    if (res.success) {
+      blog.value.isLike = !blog.value.isLike
+      if (blog.value.isLike) {
+        blog.value.liked = (blog.value.liked || 0) + 1
+      } else {
+        blog.value.liked = Math.max(0, (blog.value.liked || 0) - 1)
+      }
+      // 重新加载点赞用户列表
+      await loadLikeUsers()
+    } else {
+      showToast(res.message || '操作失败')
+    }
+  } catch (error) {
+    console.error('点赞失败:', error)
+    showToast(error.message || '操作失败，请稍后重试')
+  }
 }
 
 onMounted(() => {
@@ -192,6 +237,56 @@ onMounted(() => {
   border-radius: 20px;
   cursor: pointer;
   font-size: 14px;
+  color: #323233;
+}
+
+.likes-section {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid #f0f0f0;
+}
+
+.likes-section .section-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #323233;
+  margin-bottom: 12px;
+}
+
+.users-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.user-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background-color: #f7f8fa;
+  border-radius: 16px;
+}
+
+.user-list-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.user-list-avatar-placeholder {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #ff6a00 0%, #ff8c00 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.user-list-name {
+  font-size: 13px;
   color: #323233;
 }
 </style>
