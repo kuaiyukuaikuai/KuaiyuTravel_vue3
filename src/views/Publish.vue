@@ -90,7 +90,9 @@
 import { ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { showToast } from 'vant'
-import request from '@/utils/request'
+import { uploadBlogImage } from '@/api/upload'
+import { publishBlog } from '@/api/blog'
+import { getPoiByName } from '@/api/poi'
 
 const router = useRouter()
 
@@ -125,11 +127,7 @@ const afterRead = async (file) => {
     const formData = new FormData()
     formData.append('file', file.file)
 
-    const res = await request.post('/upload/blog', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data'
-      }
-    })
+    const res = await uploadBlogImage(formData)
 
     file.url = res.data
     file.status = 'uploaded'
@@ -162,7 +160,7 @@ const handlePublish = async () => {
 
   try {
     const images = getImagesString()
-    await request.post('/blog', {
+    await publishBlog({
       title: title.value,
       content: content.value,
       images: images,
@@ -189,11 +187,9 @@ const onSearchPoi = () => {
 
 const onLoadPoi = async () => {
   try {
-    const res = await request.get('/poi/of/name', {
-      params: {
-        name: searchKeyword.value,
-        current: poiCurrent.value
-      }
+    const res = await getPoiByName({
+      name: searchKeyword.value,
+      current: poiCurrent.value
     })
     const newRecords = res.data?.records || res.data || []
 

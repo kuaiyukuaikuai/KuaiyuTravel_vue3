@@ -93,7 +93,8 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import request from '@/utils/request'
+import { getPoiTypeList } from '@/api/poiType'
+import { getHotBlogs } from '@/api/blog'
 import locationUtil from '@/utils/location'
 import { showToast } from 'vant'
 
@@ -145,7 +146,7 @@ const retryLocation = () => {
 
 const loadCategoryList = async () => {
   try {
-    const res = await request.get('/poi-type/list')
+    const res = await getPoiTypeList()
     if (res.data && res.data.length > 0) {
       categoryList.value = res.data.map((item, index) => ({
         ...item,
@@ -162,10 +163,8 @@ const loadCategoryList = async () => {
 
 const onLoad = async () => {
   try {
-    const res = await request.get('/blog/hot', {
-      params: {
-        current: current.value
-      }
+    const res = await getHotBlogs({
+      current: current.value
     })
 
     if (res.data && res.data.length > 0) {

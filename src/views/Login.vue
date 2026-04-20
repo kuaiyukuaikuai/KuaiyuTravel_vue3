@@ -15,7 +15,7 @@
             :type="countDown === 0 ? 'primary' : 'default'"
             size="small"
             :disabled="countDown > 0"
-            @click="sendCode"
+            @click="sendVerificationCode"
             class="send-code-btn"
           >
             {{ countDown > 0 ? `${countDown}s` : '发送验证码' }}
@@ -60,7 +60,7 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { showToast } from 'vant'
-import request from '@/utils/request'
+import { sendCode, login } from '@/api/user'
 
 const router = useRouter()
 const phone = ref('')
@@ -73,16 +73,14 @@ const goBack = () => {
   router.back()
 }
 
-const sendCode = async () => {
+const sendVerificationCode = async () => {
   if (!phone.value || !/^1[3-9]\d{9}$/.test(phone.value)) {
     showToast('请输入正确的手机号')
     return
   }
 
   try {
-    await request.post('/user/code', null, {
-      params: { phone: phone.value }
-    })
+    await sendCode({ phone: phone.value })
     showToast('验证码已发送')
     
     countDown.value = 60
@@ -105,7 +103,7 @@ const onSubmit = async () => {
   }
 
   try {
-    const res = await request.post('/user/login', {
+    const res = await login({
       phone: phone.value,
       code: code.value
     })

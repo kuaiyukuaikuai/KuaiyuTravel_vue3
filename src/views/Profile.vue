@@ -3,7 +3,7 @@
     <van-nav-bar title="个人主页" left-arrow @click-left="goBack" />
     
     <div class="user-info-section">
-      <div class="logout-btn" @click="logout">
+      <div class="logout-btn" @click="handleLogout">
         退出登录
       </div>
       
@@ -89,7 +89,8 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { showToast } from 'vant'
-import request from '@/utils/request'
+import { getCurrentUser, logout } from '@/api/user'
+import { getMyBlogs } from '@/api/blog'
 
 const router = useRouter()
 const activeTab = ref('notes')
@@ -108,7 +109,7 @@ const goBack = () => {
 
 const loadUserInfo = async () => {
   try {
-    const res = await request.get('/user/me')
+    const res = await getCurrentUser()
     if (res.data) {
       userInfo.value = res.data
     }
@@ -119,10 +120,8 @@ const loadUserInfo = async () => {
 
 const onLoad = async () => {
   try {
-    const res = await request.get('/blog/of/me', {
-      params: {
-        current: current.value
-      }
+    const res = await getMyBlogs({
+      current: current.value
     })
     
     if (res.data && res.data.length > 0) {
@@ -158,9 +157,9 @@ const onRefresh = async () => {
   refreshing.value = false
 }
 
-const logout = async () => {
+const handleLogout = async () => {
   try {
-    await request.post('/user/logout')
+    await logout()
   } catch (error) {
     console.error('退出登录失败:', error)
   }
