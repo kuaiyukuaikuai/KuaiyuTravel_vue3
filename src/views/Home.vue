@@ -179,6 +179,12 @@ const onLoad = async () => {
         ...item,
         image: item.images ? item.images.split(',')[0] : 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=400&h=400&fit=crop'
       }))
+
+          // 👇 核心修复：数组去重（只把当前 blogList 里没有的 id 加进去）
+      const uniqueBlogs = newBlogs.filter(newBlog => 
+        !blogList.value.some(existingBlog => existingBlog.id === newBlog.id)
+      )
+
       blogList.value.push(...newBlogs)
       current.value++
 
@@ -382,7 +388,12 @@ onMounted(() => {
 
 .card-image {
   width: 100%;
+  /* 👇 加上这两行保底配置 */
+  min-height: 150px; 
+  background-color: #f2f3f5; 
+  
   display: block;
+  object-fit: cover; /* 保证图片不变形 */
 }
 
 .card-content {
