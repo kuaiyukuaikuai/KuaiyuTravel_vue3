@@ -196,10 +196,19 @@ const onLoad = async () => {
 }
 
 const onRefresh = async () => {
+  // 【核心修复：防并发】先手动开启 loading，阻止 van-list 自动触发
+  loading.value = true
+  
   current.value = 1
-  blogList.value = []
   finished.value = false
+  
+  // 然后再清空数据
+  blogList.value = []
+  
+  // 手动拉取第一页数据
   await onLoad()
+  
+  // 关闭下拉刷新动画
   refreshing.value = false
 }
 

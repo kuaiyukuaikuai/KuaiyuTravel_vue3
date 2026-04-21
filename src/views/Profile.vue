@@ -150,10 +150,20 @@ const onLoad = async () => {
 }
 
 const onRefresh = async () => {
+  // 1. 先开启 loading，锁住并发请求
+  loading.value = true
+  
+  // 2. 重置分页参数
   current.value = 1
-  myBlogs.value = []
   finished.value = false
+  
+  // 3. 清空数据
+  myBlogs.value = []
+  
+  // 4. 手动拉取数据
   await onLoad()
+  
+  // 5. 关闭下拉动画
   refreshing.value = false
 }
 

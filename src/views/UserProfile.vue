@@ -269,10 +269,20 @@ const onLoad = async () => {
 }
 
 const onRefresh = async () => {
+  // 1. 先开启 loading，锁住并发请求
+  loading.value = true
+  
+  // 2. 重置分页参数
   current.value = 1
-  blogs.value = []
   finished.value = false
+  
+  // 3. 清空数据（注意这里变量名是 blogs）
+  blogs.value = []
+  
+  // 4. 手动拉取数据
   await onLoad()
+  
+  // 5. 关闭下拉动画
   refreshing.value = false
 }
 
