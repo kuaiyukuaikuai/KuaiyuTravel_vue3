@@ -40,13 +40,13 @@
       </div>
       
       <!-- 内容 -->
-      <div class="blog-text">{{ blog.content }}</div>
+      <div class="blog-text" v-html="blog.content"></div>
       
       <!-- 关联地点 -->
       <div class="poi-section" v-if="blog.poiId">
         <van-cell 
-          :title="blog.poiId" 
-          :value="blog.poiId" 
+          title="关联地点" 
+          :value="poiInfo?.name || blog.poiId" 
           is-link 
           @click="goToPoi(blog.poiId)"
         />
@@ -85,6 +85,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { getBlogById, likeBlog, getBlogLikes } from '@/api/blog'
 import { getCurrentUser } from '@/api/user'
 import { isFollowUser, followUser } from '@/api/follow'
+import { getPoiById } from '@/api/poi'
 import { showToast } from 'vant'
 
 const route = useRoute()
@@ -95,6 +96,7 @@ const likeUsers = ref([])
 const isFollow = ref(false)
 const followLoading = ref(false)
 const currentUser = ref(null)
+const poiInfo = ref(null) // POI详情信息
 
 const imageList = computed(() => {
   if (!blog.value?.images) return []
@@ -117,8 +119,21 @@ const loadBlogDetail = async () => {
     await loadLikeUsers()
     // 加载关注状态
     await loadFollowStatus()
+    // 如果有关联POI，加载POI详情
+    if (blog.value.poiId) {
+      await loadPoiInfo()
+    }
   } catch (error) {
     console.error('加载博客详情失败:', error)
+  }
+}
+
+const loadPoiInfo = async () => {
+  try {
+    const res = await getPoiById(blog.value.poiId)
+    poiInfo.value = res.data
+  } catch (error) {
+    console.error('加载POI信息失败:', error)
   }
 }
 
