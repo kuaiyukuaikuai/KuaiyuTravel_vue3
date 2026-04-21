@@ -33,7 +33,7 @@
           <van-radio-group v-model="agreed">
             <van-radio name="true" class="agreement-radio">
               <span class="agreement-text">我已阅读并同意</span>
-              <span class="agreement-link">《黑马点评用户服务协议》</span>
+              <span class="agreement-link">《快鱼旅行用户服务协议》</span>
               <span class="agreement-text">、</span>
               <span class="agreement-link">《隐私政策》</span>
               <span class="agreement-text">等，接受免除或者限制责任、诉讼管辖约定等粗体标示条款</span>
@@ -50,7 +50,7 @@
         >
           登录
         </van-button>
-        <div class="password-login">密码登录</div>
+        <div class="password-login" @click="goToPasswordLogin">密码登录</div>
       </van-form>
     </div>
   </div>
@@ -113,6 +113,10 @@ const onSubmit = async () => {
   } catch (error) {
     console.error(error)
   }
+}
+
+const goToPasswordLogin = () => {
+  router.push('/password-login')
 }
 </script>
 

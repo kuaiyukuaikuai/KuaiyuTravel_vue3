@@ -48,3 +48,33 @@ export const getUserById = (userId) => {
 export const getUserInfoById = (userId) => {
   return request.get(`/user/info/${userId}`)
 }
+
+/**
+ * 密码登录
+ * @param {Object} data - 登录数据
+ * @param {string} data.phone - 手机号
+ * @param {string} data.password - 密码
+ */
+export const loginByPassword = (data) => {
+  return request.post('/user/login/password', data)
+}
+
+/**
+ * 更新用户信息
+ * @param {Object} data - 用户数据
+ * @param {string} data.nickName - 昵称
+ * @param {string} data.icon - 头像
+ */
+export const updateUserInfo = (data) => {
+  return request.put('/user/info', data)
+}
+
+/**
+ * 修改密码
+ * @param {Object} data - 密码数据
+ * @param {string} data.oldPassword - 旧密码
+ * @param {string} data.newPassword - 新密码
+ */
+export const updatePassword = (data) => {
+  return request.put('/user/password', data)
+}

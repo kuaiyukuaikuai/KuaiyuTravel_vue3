@@ -20,7 +20,7 @@
         </div>
       </div>
       
-      <van-button round size="small" class="edit-btn">编辑资料</van-button>
+      <van-button round size="small" class="edit-btn" @click="goToEditProfile">编辑资料</van-button>
       
       <div class="intro-text">添加个人简介，让大家更好的认识你 ✍️</div>
     </div>
@@ -105,6 +105,10 @@ const PAGE_SIZE = 10
 
 const goBack = () => {
   router.back()
+}
+
+const goToEditProfile = () => {
+  router.push('/edit-profile')
 }
 
 const loadUserInfo = async () => {

@@ -10,6 +10,17 @@ const router = createRouter({
       component: () => import('@/views/Login.vue')
     },
     {
+      path: '/password-login',
+      name: 'PasswordLogin',
+      component: () => import('@/views/PasswordLogin.vue')
+    },
+    {
+      path: '/edit-profile',
+      name: 'EditProfile',
+      component: () => import('@/views/EditProfile.vue'),
+      meta: { requiresAuth: true }
+    },
+    {
       path: '/publish',
       name: 'Publish',
       component: () => import('@/views/Publish.vue'),
