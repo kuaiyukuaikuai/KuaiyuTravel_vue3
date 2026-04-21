@@ -32,3 +32,19 @@ export const getCurrentUser = () => {
 export const logout = () => {
   return request.post('/user/logout')
 }
+
+/**
+ * 根据ID获取用户信息
+ * @param {number} userId - 用户ID
+ */
+export const getUserById = (userId) => {
+  return request.get(`/user/${userId}`)
+}
+
+/**
+ * 获取用户详情信息
+ * @param {number} userId - 用户ID
+ */
+export const getUserInfoById = (userId) => {
+  return request.get(`/user/info/${userId}`)
+}

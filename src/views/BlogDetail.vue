@@ -4,7 +4,7 @@
     
     <div class="blog-content" v-if="blog">
       <!-- 用户信息 -->
-      <div class="user-section">
+      <div class="user-section" @click="goToUserProfile">
         <img v-if="blog.icon" :src="blog.icon" class="user-avatar" alt="" />
         <div v-else class="user-avatar-placeholder">
           <van-icon name="user-o" size="20" color="#fff" />
@@ -12,6 +12,17 @@
         <div class="user-info">
           <div class="user-name">{{ blog.name || '用户' }}</div>
         </div>
+        <van-button 
+          v-if="!isCurrentUser"
+          round 
+          size="small" 
+          class="follow-btn"
+          :type="isFollow ? 'default' : 'danger'"
+          @click.stop="toggleFollow"
+          :loading="followLoading"
+        >
+          {{ isFollow ? '已关注' : '+ 关注' }}
+        </van-button>
       </div>
       
       <!-- 标题 -->
@@ -72,6 +83,8 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { getBlogById, likeBlog, getBlogLikes } from '@/api/blog'
+import { getCurrentUser } from '@/api/user'
+import { isFollowUser, followUser } from '@/api/follow'
 import { showToast } from 'vant'
 
 const route = useRoute()
@@ -79,21 +92,84 @@ const router = useRouter()
 
 const blog = ref(null)
 const likeUsers = ref([])
+const isFollow = ref(false)
+const followLoading = ref(false)
+const currentUser = ref(null)
 
 const imageList = computed(() => {
   if (!blog.value?.images) return []
   return blog.value.images.split(',').filter(img => img)
 })
 
+const isCurrentUser = computed(() => {
+  return currentUser.value && blog.value && currentUser.value.id === blog.value.userId
+})
+
 const loadBlogDetail = async () => {
   try {
+    // 加载当前用户信息
+    await loadCurrentUser()
+    
     const id = route.params.id
     const res = await getBlogById(id)
     blog.value = res.data
     // 加载点赞用户列表
     await loadLikeUsers()
+    // 加载关注状态
+    await loadFollowStatus()
   } catch (error) {
     console.error('加载博客详情失败:', error)
+  }
+}
+
+const loadCurrentUser = async () => {
+  try {
+    const res = await getCurrentUser()
+    currentUser.value = res.data
+  } catch (error) {
+    console.error('获取当前用户信息失败:', error)
+  }
+}
+
+const loadFollowStatus = async () => {
+  try {
+    if (blog.value && blog.value.userId && !isCurrentUser.value) {
+      const res = await isFollowUser(blog.value.userId)
+      isFollow.value = res.data || false
+    }
+  } catch (error) {
+    console.error('获取关注状态失败:', error)
+  }
+}
+
+const goToUserProfile = () => {
+  if (blog.value && blog.value.userId) {
+    // 检查是否是自己
+    if (currentUser.value && currentUser.value.id === blog.value.userId) {
+      // 跳转到个人主页
+      router.push('/profile')
+    } else {
+      // 跳转到通用用户主页
+      router.push(`/user-profile/${blog.value.userId}`)
+    }
+  }
+}
+
+const toggleFollow = async () => {
+  try {
+    followLoading.value = true
+    const res = await followUser(blog.value.userId, !isFollow.value)
+    if (res.success) {
+      isFollow.value = !isFollow.value
+      showToast(isFollow.value ? '关注成功' : '取消关注')
+    } else {
+      showToast(res.message || '操作失败')
+    }
+  } catch (error) {
+    console.error('关注操作失败:', error)
+    showToast(error.message || '操作失败，请稍后重试')
+  } finally {
+    followLoading.value = false
   }
 }
 
@@ -162,6 +238,20 @@ onMounted(() => {
   padding-bottom: 16px;
   border-bottom: 1px solid #f0f0f0;
   margin-bottom: 16px;
+  cursor: pointer;
+}
+
+.user-section .follow-btn {
+  margin-left: auto;
+  color: #323233;
+  background-color: #fff;
+  border: 1px solid #ebedf0;
+}
+
+.user-section .follow-btn.van-button--danger {
+  background: linear-gradient(135deg, #ff6a00 0%, #ff8c00 100%);
+  border: none;
+  color: #fff;
 }
 
 .user-avatar {

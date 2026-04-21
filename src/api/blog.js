@@ -53,3 +53,13 @@ export const likeBlog = (id) => {
 export const getBlogLikes = (id) => {
   return request.get(`/blog/likes/${id}`)
 }
+
+/**
+ * 根据用户ID获取博客列表
+ * @param {Object} params - 请求参数
+ * @param {number} params.current - 页码
+ * @param {number} params.id - 用户ID
+ */
+export const getBlogsByUserId = (params) => {
+  return request.get('/blog/of/user', { params })
+}

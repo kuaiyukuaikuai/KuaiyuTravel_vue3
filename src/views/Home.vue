@@ -45,7 +45,7 @@
               <div class="card-content">
                 <div class="card-title">{{ item.title }}</div>
                 <div class="card-footer">
-                  <div class="user-info">
+                  <div class="user-info" @click.stop="goToUserProfile(item.userId)">
                     <img v-if="item.icon" :src="item.icon" class="user-avatar-img" alt="" />
                     <div v-else class="user-avatar-small">
                       <van-icon name="user-o" size="14" color="#fff" />
@@ -71,7 +71,7 @@
               <div class="card-content">
                 <div class="card-title">{{ item.title }}</div>
                 <div class="card-footer">
-                  <div class="user-info">
+                  <div class="user-info" @click.stop="goToUserProfile(item.userId)">
                     <img v-if="item.icon" :src="item.icon" class="user-avatar-img" alt="" />
                     <div v-else class="user-avatar-small">
                       <van-icon name="user-o" size="14" color="#fff" />
@@ -97,6 +97,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { getPoiTypeList } from '@/api/poiType'
 import { getHotBlogs, likeBlog } from '@/api/blog'
+import { getCurrentUser } from '@/api/user'
 import locationUtil from '@/utils/location'
 import { showToast } from 'vant'
 
@@ -108,6 +109,7 @@ const finished = ref(false)
 const refreshing = ref(false)
 const current = ref(1)
 const currentLocation = ref({})
+const currentUser = ref(null) // 当前登录用户
 const PAGE_SIZE = 10
 
 const defaultCategories = [
@@ -214,6 +216,28 @@ const goToBlogDetail = (id) => {
   }
 }
 
+const loadCurrentUser = async () => {
+  try {
+    const res = await getCurrentUser()
+    currentUser.value = res.data
+  } catch (error) {
+    console.error('获取当前用户信息失败:', error)
+  }
+}
+
+const goToUserProfile = (userId) => {
+  if (userId) {
+    // 检查是否是自己
+    if (currentUser.value && currentUser.value.id === userId) {
+      // 跳转到个人主页
+      router.push('/profile')
+    } else {
+      // 跳转到通用用户主页
+      router.push(`/user-profile/${userId}`)
+    }
+  }
+}
+
 const handleLike = async (item) => {
   try {
     const res = await likeBlog(item.id)
@@ -236,6 +260,7 @@ const handleLike = async (item) => {
 onMounted(() => {
   loadCategoryList()
   loadLocation()
+  loadCurrentUser()
 })
 </script>
 
