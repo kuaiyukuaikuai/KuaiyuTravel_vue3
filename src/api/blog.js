@@ -63,3 +63,13 @@ export const getBlogLikes = (id) => {
 export const getBlogsByUserId = (params) => {
   return request.get('/blog/of/user', { params })
 }
+
+/**
+ * 获取关注用户的博客列表
+ * @param {Object} params - 请求参数
+ * @param {number} params.lastId - 上次查询的最后一个ID
+ * @param {number} params.offset - 偏移量
+ */
+export const getFollowBlogs = (params) => {
+  return request.get('/blog/of/follow', { params })
+}

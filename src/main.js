@@ -26,7 +26,8 @@ import {
   Swipe,
   SwipeItem,
   Empty,
-  Loading
+  Loading,
+  CellGroup
 } from 'vant'
 import 'vant/lib/index.css'
 
@@ -58,5 +59,6 @@ app.use(Swipe)
 app.use(SwipeItem)
 app.use(Empty)
 app.use(Loading)
+app.use(CellGroup)
 
 app.mount('#app')

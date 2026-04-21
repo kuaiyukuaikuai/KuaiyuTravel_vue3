@@ -1,13 +1,32 @@
 <template>
   <div class="message-container">
-    <van-nav-bar title="消息" />
+    <van-nav-bar title="消息" left-arrow @click-left="goBack" />
+    
     <div class="message-content">
-      <div class="placeholder-text">消息页面</div>
+      <van-cell-group inset>
+        <van-cell title="私信" is-link @click="handlePrivateMessage" />
+        <van-cell title="新动态" is-link @click="goToFollowBlogs" />
+      </van-cell-group>
     </div>
   </div>
 </template>
 
 <script setup>
+import { useRouter } from 'vue-router'
+
+const router = useRouter()
+
+const goBack = () => {
+  router.back()
+}
+
+const handlePrivateMessage = () => {
+  // 私信功能暂时不用做
+}
+
+const goToFollowBlogs = () => {
+  router.push('/follow-blogs')
+}
 </script>
 
 <style scoped>
@@ -17,14 +36,6 @@
 }
 
 .message-content {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  padding: 50px 0;
-}
-
-.placeholder-text {
-  font-size: 20px;
-  color: #969799;
+  padding-top: 16px;
 }
 </style>

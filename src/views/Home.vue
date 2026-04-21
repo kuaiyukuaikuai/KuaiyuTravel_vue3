@@ -9,7 +9,10 @@
         <van-icon name="search" size="16" color="#999" />
         <span class="search-placeholder">请输入商户名、地点</span>
       </div>
-      <div class="user-avatar">
+      <div class="message-btn" @click="goToMessage">
+        <van-icon name="chat-o" size="20" color="#fff" />
+      </div>
+      <div class="user-avatar" @click="goToProfile">
         <van-icon name="user-o" size="20" color="#fff" />
       </div>
     </div>
@@ -216,6 +219,14 @@ const goToBlogDetail = (id) => {
   }
 }
 
+const goToMessage = () => {
+  router.push('/message')
+}
+
+const goToProfile = () => {
+  router.push('/profile')
+}
+
 const loadCurrentUser = async () => {
   try {
     const res = await getCurrentUser()
@@ -307,6 +318,7 @@ onMounted(() => {
   font-size: 14px;
 }
 
+.message-btn,
 .user-avatar {
   width: 32px;
   height: 32px;
@@ -315,6 +327,11 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
+  cursor: pointer;
+}
+
+.message-btn {
+  margin-right: 8px;
 }
 
 .category-section {
