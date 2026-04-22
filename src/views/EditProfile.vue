@@ -4,7 +4,6 @@
     
     <div class="form-content">
       <van-cell-group inset>
-        <!-- 头像 -->
         <van-cell title="头像">
           <template #right-icon>
             <div class="avatar-upload-wrapper" @click="selectAvatar">
@@ -12,11 +11,14 @@
               <div v-else class="avatar-placeholder">
                 <van-icon name="photograph" size="24" color="#fff" />
               </div>
+              
+              <div v-if="isUploadingAvatar" class="uploading-mask">
+                <van-loading type="spinner" size="20" color="#fff" />
+              </div>
             </div>
           </template>
         </van-cell>
         
-        <!-- 昵称 -->
         <van-cell title="昵称">
           <template #right-icon>
             <van-field
@@ -35,8 +37,9 @@
         block
         type="primary"
         class="save-btn"
-        :loading="savingInfo"
-        :disabled="!nickName"
+        :loading="savingInfo || isUploadingAvatar"
+        :disabled="!nickName || isUploadingAvatar"
+        loading-text="处理中..."
         @click="handleSaveInfo"
       >
         保存资料
@@ -48,7 +51,6 @@
         <div class="divider-line"></div>
       </div>
       
-      <!-- 密码修改 -->
       <van-form @submit="handleUpdatePassword">
         <van-cell-group inset>
           <van-field
@@ -98,7 +100,6 @@
       </van-form>
     </div>
     
-    <!-- 隐藏的文件输入框 -->
     <input
       ref="avatarInput"
       type="file"
@@ -113,6 +114,7 @@
 import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { showToast } from 'vant'
+import Compressor from 'compressorjs' // 引入压缩插件
 import { getCurrentUser, updateUserInfo, updatePassword } from '@/api/user'
 import { uploadIcon } from '@/api/upload'
 
@@ -122,9 +124,11 @@ const avatarInput = ref(null)
 const userInfo = ref({})
 const nickName = ref('')
 const avatarPreview = ref('')
-const currentAvatar = ref('')
-const avatarFile = ref(null)
+const currentAvatar = ref('') // 最终要存入数据库的头像URL
 const savingInfo = ref(false)
+
+// 👇 新增：头像正在上传的全局状态锁
+const isUploadingAvatar = ref(false)
 
 const oldPassword = ref('')
 const newPassword = ref('')
@@ -135,16 +139,11 @@ const updatingPassword = ref(false)
 const passwordLevels = [0, 1, 2, 3]
 const passwordStrengthText = computed(() => {
   switch (passwordStrength.value) {
-    case 0:
-      return ''
-    case 1:
-      return '弱'
-    case 2:
-      return '中'
-    case 3:
-      return '强'
-    default:
-      return ''
+    case 0: return ''
+    case 1: return '弱'
+    case 2: return '中'
+    case 3: return '强'
+    default: return ''
   }
 })
 
@@ -163,10 +162,15 @@ const goBack = () => {
 }
 
 const selectAvatar = () => {
+  // 如果正在上传，禁止重复点击
+  if (isUploadingAvatar.value) return
   avatarInput.value.click()
 }
 
-const handleAvatarChange = (e) => {
+/**
+ * 核心逻辑：选择头像后立即压缩并上传
+ */
+const handleAvatarChange = async (e) => {
   const file = e.target.files[0]
   if (!file) return
 
@@ -175,13 +179,42 @@ const handleAvatarChange = (e) => {
     return
   }
 
-  if (file.size > 5 * 1024 * 1024) {
-    showToast('图片大小不能超过5MB')
-    return
-  }
+  try {
+    // 1. 开启头像上传锁，展示 loading 动画
+    isUploadingAvatar.value = true
 
-  avatarFile.value = file
-  avatarPreview.value = URL.createObjectURL(file)
+    // 2. 压缩头像 (尺寸限制在 400px 以内，极大缩小体积)
+    const compressedBlob = await new Promise((resolve, reject) => {
+      new Compressor(file, {
+        quality: 0.6,
+        maxWidth: 400,
+        success(result) {
+          resolve(result)
+        },
+        error(err) {
+          console.error('压缩报错:', err.message)
+          reject(err)
+        },
+      })
+    })
+
+    // 3. 构造表单并上传到 OSS
+    const formData = new FormData()
+    formData.append('file', compressedBlob, file.name)
+    const uploadRes = await uploadIcon(formData)
+
+    // 4. 上传成功，将 OSS 的真实链接赋值给预览图和要提交的表单字段
+    avatarPreview.value = uploadRes.data
+    currentAvatar.value = uploadRes.data
+
+  } catch (error) {
+    console.error('头像上传失败:', error)
+    showToast('头像处理失败，请重试')
+  } finally {
+    // 5. 无论成功失败，解锁按钮，并清空 input 以便下次能重复选同一张图
+    isUploadingAvatar.value = false
+    e.target.value = ''
+  }
 }
 
 const checkPasswordStrength = () => {
@@ -217,22 +250,22 @@ const handleSaveInfo = async () => {
     return
   }
 
+  // 终极防线：防止恶意破解绕过按钮点击
+  if (isUploadingAvatar.value) {
+    showToast('头像正在上传中，请稍后')
+    return
+  }
+
   try {
     savingInfo.value = true
 
-    let iconUrl = currentAvatar.value
-    if (avatarFile.value) {
-      const formData = new FormData()
-      formData.append('file', avatarFile.value)
-      const uploadRes = await uploadIcon(formData)
-      iconUrl = uploadRes.data
-    }
-
+    // 此时不需要再去上传头像了，因为 handleAvatarChange 已经做完了
+    // 直接拿着最新的 currentAvatar 去更新数据库
     const updateData = {
       nickName: nickName.value.trim()
     }
-    if (iconUrl) {
-      updateData.icon = iconUrl
+    if (currentAvatar.value) {
+      updateData.icon = currentAvatar.value
     }
 
     await updateUserInfo(updateData)
@@ -303,23 +336,40 @@ onMounted(() => {
   padding: 16px 0;
 }
 
+/* 头像区域样式增强 */
 .avatar-upload-wrapper {
+  position: relative;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
   cursor: pointer;
+  overflow: hidden;
 }
 
 .avatar-preview {
-  width: 64px;
-  height: 64px;
+  width: 100%;
+  height: 100%;
   border-radius: 50%;
   object-fit: cover;
   display: block;
 }
 
 .avatar-placeholder {
-  width: 64px;
-  height: 64px;
-  border-radius: 50%;
+  width: 100%;
+  height: 100%;
   background: linear-gradient(135deg, #ff6a00 0%, #ff8c00 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.uploading-mask {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.4);
   display: flex;
   align-items: center;
   justify-content: center;
