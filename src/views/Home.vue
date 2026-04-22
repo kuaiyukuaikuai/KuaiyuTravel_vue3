@@ -180,18 +180,25 @@ const onLoad = async () => {
         image: item.images ? item.images.split(',')[0] : 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=400&h=400&fit=crop'
       }))
 
-          // 👇 核心修复：数组去重（只把当前 blogList 里没有的 id 加进去）
+      // 核心修复1：数组去重（只把当前 blogList 里没有的 id 加进去）
       const uniqueBlogs = newBlogs.filter(newBlog => 
         !blogList.value.some(existingBlog => existingBlog.id === newBlog.id)
       )
 
-      blogList.value.push(...newBlogs)
-      current.value++
-
-      if (res.data.length < PAGE_SIZE) {
+      // 🚨 修复点A：这里一定要改成 push 过滤后的 uniqueBlogs！
+      blogList.value.push(...uniqueBlogs)
+      
+      // 🚨 修复点B：彻底打断死循环的终极防线
+      // 如果去重后的数组是空的（说明后端全返回了重复数据），或者返回数据少于一页，就宣告加载完毕
+      if (uniqueBlogs.length === 0 || res.data.length < PAGE_SIZE) {
         finished.value = true
+      } else {
+        // 只有真的加载到了新的不重复数据，才允许页码 +1
+        current.value++
       }
+
     } else {
+      // 后端直接返回空数据，也宣告结束
       finished.value = true
     }
   } catch (error) {
