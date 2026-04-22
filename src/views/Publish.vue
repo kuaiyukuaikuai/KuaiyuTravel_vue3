@@ -6,7 +6,16 @@
       </template>
       <template #title>发笔记</template>
       <template #right>
-        <van-button class="nav-publish" type="primary" round size="small" @click="handlePublish">发布</van-button>
+        <van-button 
+          class="nav-publish" 
+          type="primary" 
+          round 
+          size="small" 
+          :loading="isUploading"
+          :disabled="isUploading"
+          loading-text="处理中"
+          @click="handlePublish"
+        >发布</van-button>
       </template>
     </van-nav-bar>
 
@@ -88,6 +97,7 @@
 
 <script setup>
 import { ref, watch } from 'vue'
+import Compressor from 'compressorjs'
 import { useRouter } from 'vue-router'
 import { showToast } from 'vant'
 import { uploadBlogImage } from '@/api/upload'
@@ -107,6 +117,9 @@ const poiLoading = ref(false)
 const poiFinished = ref(false)
 const poiCurrent = ref(1)
 
+// 👇 新增：全局的上传/发布状态锁
+const isUploading = ref(false)
+
 watch(showPoiPopup, (val) => {
   if (val) {
     poiList.value = []
@@ -123,26 +136,59 @@ const goBack = () => {
 }
 
 const afterRead = async (file) => {
-  try {
-    const formData = new FormData()
-    formData.append('file', file.file)
+  // 兼容多选图片返回数组的情况
+  const files = Array.isArray(file) ? file : [file]
+  
+  // 开启全局锁，按钮变成“处理中”
+  isUploading.value = true
 
-    const res = await uploadBlogImage(formData)
+  for (const item of files) {
+    // 改变单张图片在界面的显示状态
+    item.status = 'uploading'
+    item.message = '压缩并上传中...'
 
-    file.url = res.data
-    file.status = 'uploaded'
-    file.message = '上传成功'
-  } catch (error) {
-    console.error('图片上传失败:', error)
-    file.status = 'failed'
-    file.message = '上传失败'
-    showToast('图片上传失败')
+    try {
+      // 👇 核心新增：使用 Promise 包装的图片压缩逻辑
+      const compressedBlob = await new Promise((resolve, reject) => {
+        new Compressor(item.file, {
+          quality: 0.6, // 压缩质量：0.6 是个非常完美的平衡点
+          maxWidth: 1280, // 限制最大宽度（超过会自动等比缩放，小红书标准）
+          success(result) {
+            resolve(result)
+          },
+          error(err) {
+            console.error('压缩报错:', err.message)
+            reject(err)
+          },
+        })
+      })
+
+      // 构建表单，传入压缩后的 Blob 数据，并带上原来的文件名
+      const formData = new FormData()
+      formData.append('file', compressedBlob, item.file.name)
+
+      // 请求后端接口
+      const res = await uploadBlogImage(formData)
+
+      item.url = res.data
+      item.status = 'done' 
+      item.message = '上传成功'
+    } catch (error) {
+      console.error('图片处理失败:', error)
+      item.status = 'failed'
+      item.message = '上传失败'
+      showToast('图片处理或上传失败')
+    }
   }
+
+  // 所有图片循环传完后，解开全局锁
+  isUploading.value = false
 }
 
 const getImagesString = () => {
   return fileList.value
-    .filter(file => file.status === 'uploaded' && file.url)
+    // 👇 兼容之前的 'uploaded' 和 标准的 'done' 状态
+    .filter(file => (file.status === 'done' || file.status === 'uploaded') && file.url)
     .map(file => file.url)
     .join(',')
 }
@@ -157,8 +203,18 @@ const handlePublish = async () => {
     showToast('请填写内容')
     return
   }
+  
+  // 👇 终极防线：检查是否还有图片处于上传状态（针对网络极其卡顿的情况）
+  const uploadingFiles = fileList.value.filter(f => f.status === 'uploading')
+  if (uploadingFiles.length > 0) {
+    showToast('图片正在上传中，请稍后')
+    return
+  }
 
   try {
+    // 调用发布接口时也上锁，防止用户手抖连击发布两条一样的博客
+    isUploading.value = true 
+    
     const images = getImagesString()
     await publishBlog({
       title: title.value,
@@ -174,6 +230,9 @@ const handlePublish = async () => {
   } catch (error) {
     console.error('发布失败:', error)
     showToast('发布失败')
+  } finally {
+    // 无论成功失败都解锁
+    isUploading.value = false
   }
 }
 
